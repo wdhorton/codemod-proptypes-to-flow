@@ -1,7 +1,7 @@
 /**
  * Handles transforming a React.PropType to an equivalent flowtype
  */
-export default function propTypeToFlowType(j, key, value) {
+export default function propTypeToFlowType(j, key, value, leadingComments, comments) {
   /**
    * Returns an expression without `isRequired`
    * @param {Node} node NodePath Should be the `value` of a `Property`
@@ -97,37 +97,72 @@ export default function propTypeToFlowType(j, key, value) {
     } else if (name === 'arrayOf') {
       returnValue = j.genericTypeAnnotation(
         j.identifier('Array'), j.typeParameterInstantiation(
-          [propTypeToFlowType(j, null, node.arguments[0] || j.anyTypeAnnotation())]
+          [propTypeToFlowType(
+            j,
+            null,
+            node.arguments[0] || j.anyTypeAnnotation(),
+            node.arguments[0] && node.arguments[0].leadingComments,
+            node.arguments[0] && node.arguments[0].comments
+          )]
         )
       );
     } else if (name === 'objectOf') {
       // TODO: Is there a direct Flow translation for this?
       returnValue = j.genericTypeAnnotation(
         j.identifier('Object'), j.typeParameterInstantiation(
-          [propTypeToFlowType(j, null, node.arguments[0] || j.anyTypeAnnotation())]
+          [propTypeToFlowType(
+            j,
+            null,
+            node.arguments[0] || j.anyTypeAnnotation(),
+            node.arguments[0] && node.arguments[0].leadingComments,
+            node.arguments[0] && node.arguments[0].comments
+          )]
         )
       );
     } else if (name === 'shape') {
       returnValue = j.objectTypeAnnotation(
-        node.arguments[0].properties.map(arg => propTypeToFlowType(j, arg.key, arg.value))
+        node.arguments[0].properties.map(arg => propTypeToFlowType(
+          j,
+          arg.key,
+          arg.value,
+          arg.leadingComments,
+          arg.comments
+        ))
       );
     } else if (name === 'oneOfType' || name === 'oneOf') {
       returnValue = j.unionTypeAnnotation(
-        node.arguments[0].elements.map(arg => propTypeToFlowType(j, null, arg))
+        node.arguments[0].elements.map(arg => propTypeToFlowType(
+          j,
+          null,
+          arg,
+          arg.leadingComments,
+          arg.comments
+        ))
       );
     }
   } else if (node.type === 'ObjectExpression') {
     returnValue = j.objectTypeAnnotation(
-      node.arguments.map(arg => propTypeToFlowType(j, arg.key, arg.value))
+      node.arguments.map(arg => propTypeToFlowType(
+        j,
+        arg.key,
+        arg.value,
+        arg.leadingComments,
+        arg.comments
+      ))
     );
   } else if (node.type === 'Identifier') {
     returnValue = j.genericTypeAnnotation(node, null);
   }
 
-  // finally return either an objectTypeProperty or just a property if `key` is null
-  if (!key) {
-    return returnValue;
-  } else {
-    return j.objectTypeProperty(key, returnValue, !required);
+
+  // returnValue should be an objectTypeProperty if `key` is not null
+  if (key) {
+    returnValue = j.objectTypeProperty(key, returnValue, !required);
   }
+
+  // handle comments
+  returnValue.leadingComments = leadingComments;
+  returnValue.comments = comments;
+
+  return returnValue;
 }
