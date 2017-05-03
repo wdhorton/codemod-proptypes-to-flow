@@ -17,6 +17,33 @@ function addFlowComment(j, ast) {
   getBodyNode().comments = comments;
 }
 
+function removePropTypesImport(j, ast) {
+  const propTypesUsed = ast
+    .find(j.MemberExpression, {
+      object: {
+        type: 'Identifier',
+        name: 'PropTypes',
+      }})
+    .size() > 0;
+  const propTypesReassigned = ast
+    .find(j.VariableDeclarator, {
+      init: {
+        type: 'Identifier',
+        name: 'PropTypes',
+      },
+    }).size() > 0;
+
+  if (!propTypesUsed && !propTypesReassigned) {
+    ast.find(j.ImportSpecifier, {
+      imported: {
+        type: 'Identifier',
+        name: 'PropTypes',
+      },
+    })
+    .remove();
+  }
+}
+
 export default function transformer(file, api) {
   const j = api.jscodeshift;
   const root = j(file.source);
@@ -31,6 +58,7 @@ export default function transformer(file, api) {
 
   if (classModifications || functionalModifications) {
     addFlowComment(j, root);
+    removePropTypesImport(j, root);
     return root.toSource({quote: 'single', trailingComma: true });
   } else {
     return file.source;
