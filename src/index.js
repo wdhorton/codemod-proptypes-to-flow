@@ -22,7 +22,7 @@ export default function transformer(file, api) {
   const root = j(file.source);
 
   const reactUtils = ReactUtils(j);
-  if (!reactUtils.hasReact(root)) {
+  if (!reactUtils.hasReact(root) || root.find(j.TypeAlias).size() > 0) {
     return file.source;
   }
 
