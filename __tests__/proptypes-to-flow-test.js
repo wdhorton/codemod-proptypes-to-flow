@@ -445,4 +445,40 @@ describe('React.PropTypes to flow', () => {
     expect(transformString(input)).toMatchSnapshot();
   });
 
+  it('handles block comments correctly', () => {
+    const input = `
+      import React from 'react';
+
+      export default class Test extends React.Component {
+        static propTypes = {
+          /**
+           * block comment
+           */
+          optionalArray: React.PropTypes.array,
+        };
+      }
+    `;
+    expect(transformString(input)).toMatchSnapshot();
+  });
+
+  it('handles comments nested in PropTypes.shape', () => {
+    const input = `
+      import React from 'react';
+
+      export default class Test extends React.Component {
+        static propTypes = {
+          optionalObjectWithShape: React.PropTypes.shape({
+            // comment 1
+            foo: PropTypes.string,
+            bar: PropTypes.shape({
+              baz: PropTypes.number,
+              // comment 2
+              another: PropTypes.func
+            })
+          }),
+        };
+      }
+    `;
+    expect(transformString(input)).toMatchSnapshot();
+  });
 });
